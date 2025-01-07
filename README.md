@@ -83,12 +83,12 @@ VMamba-ti ([[`link`](https://github.com/MzeroMiko/VMamba?tab=readme-ov-file)]):
 ```
 'checkpoints/pretrained/vssm_tiny_0230_ckpt_epoch_262.pth'
 ```
-VMamba-s ([[`link`]([https://github.com/MzeroMiko/VMamba?tab=readme-ov-file))]):
+VMamba-s ([[`link`]([https://github.com/MzeroMiko/VMamba?tab=readme-ov-file)]):
 ```
 'checkpoints/pretrained/vssm_small_0229_ckpt_epoch_222.pth'
 ```
 
-VMamba-ti ([[`link`]([https://github.com/MzeroMiko/VMamba?tab=readme-ov-file))]):
+VMamba-ti ([[`link`]([https://github.com/MzeroMiko/VMamba?tab=readme-ov-file)]):
 ```
 'checkpoints/pretrained/vssm_base_0229_ckpt_epoch_237.pth'
 ```
