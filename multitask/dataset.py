@@ -18,6 +18,15 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
+def _elastic_displacement(h, w, sigma=6.0, grid=8):
+    """Random smooth displacement field (1, h, w, 2) for elastic deformation."""
+    disp = torch.randn(2, grid, grid) * sigma
+    disp = torch.nn.functional.interpolate(
+        disp.unsqueeze(0), size=(h, w), mode="bilinear", align_corners=False
+    ).squeeze(0)  # (2, h, w)
+    return disp.permute(1, 2, 0).unsqueeze(0)  # (1, h, w, 2)
+
+
 class BUSIDataset(Dataset):
     def __init__(self, root, classes=("benign", "malignant"), size=224, train=True, samples=None):
         self.root = root

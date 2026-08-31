@@ -21,6 +21,7 @@ Usage:
   python multitask/train.py --fold 2 --resume output/exp_XXX/fold_2/ckpt_epoch30.tar --epochs 60
 """
 import argparse
+import copy
 import csv
 import glob
 import os
@@ -31,6 +32,7 @@ from datetime import datetime
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
@@ -54,6 +56,42 @@ def dice_loss(logits, target, smooth=1.0):
     union = pred.sum(dim=(1, 2, 3)) + target.sum(dim=(1, 2, 3))
     dice = (2 * inter + smooth) / (union + smooth)
     return (1 - dice).mean()
+
+
+def focal_loss(logits, targets, gamma=2.0):
+    """Focal loss: down-weight well-classified examples (handles imbalance
+    without pushing a class prior, unlike inverse-frequency weighting)."""
+    ce = F.cross_entropy(logits, targets, reduction="none")
+    pt = torch.exp(-ce)
+    return ((1 - pt) ** gamma * ce).mean()
+
+
+def tversky_loss(logits, target, alpha=0.3, beta=0.7, smooth=1.0):
+    """Tversky loss: alpha weights FP, beta weights FN. beta>alpha penalises
+    false negatives (missed lesions) more, which helps small UCLM lesions."""
+    pred = torch.sigmoid(logits)
+    tp = (pred * target).sum(dim=(1, 2, 3))
+    fp = (pred * (1 - target)).sum(dim=(1, 2, 3))
+    fn = ((1 - pred) * target).sum(dim=(1, 2, 3))
+    tversky = (tp + smooth) / (tp + alpha * fp + beta * fn + smooth)
+    return (1 - tversky).mean()
+
+
+def fda(images, beta=0.15):
+    """Fourier Domain Adaptation: swap the low-frequency amplitude spectrum
+    between random pairs in the batch (keeps content/high-freq, swaps style/domain)."""
+    B = images.size(0)
+    if B < 2:
+        return images
+    fft = torch.fft.rfft2(images, norm="ortho")
+    amp, pha = torch.abs(fft), torch.angle(fft)
+    _, _, H, W = amp.shape
+    low = torch.zeros_like(amp)
+    low[..., : int(H * beta), : int(W * beta)] = 1.0
+    perm = torch.randperm(B, device=images.device)
+    new_amp = amp * (1 - low) + amp[perm] * low
+    new_fft = new_amp * torch.exp(1j * pha)
+    return torch.fft.irfft2(new_fft, s=(images.size(-2), images.size(-1)), norm="ortho")
 
 
 def compute_metrics(logits, target):
@@ -116,11 +154,13 @@ def _load_global_best(path):
     return 0.0
 
 
-def _build_model(device, pretrained):
+def _build_model(device, pretrained, use_lass=False, use_lesion_pool=False):
     pretrained = pretrained if os.path.exists(pretrained) else None
     if pretrained is None:
         print(f"[train] WARNING: pretrained weight not found — training from scratch")
-    model = MultiTaskVMamba(encoder_config=VSSM_TINY, num_classes=2, pretrained=pretrained)
+    model = MultiTaskVMamba(encoder_config=VSSM_TINY, num_classes=2,
+                            pretrained=pretrained, use_lass=use_lass,
+                            use_lesion_pool=use_lesion_pool)
     return model.to(device)
 
 
@@ -149,6 +189,14 @@ def main():
                         help="leave-one-out: drop samples whose image basename starts with this prefix")
     parser.add_argument("--class-weight", action="store_true",
                         help="weight CrossEntropyLoss by inverse class frequency")
+    parser.add_argument("--focal", action="store_true", help="use focal loss for classification")
+    parser.add_argument("--tversky", action="store_true", help="use Tversky loss for segmentation")
+    parser.add_argument("--fda", action="store_true", help="apply Fourier Domain Adaptation augmentation")
+    parser.add_argument("--ema", action="store_true", help="use exponential moving average of weights")
+    parser.add_argument("--lass", action="store_true",
+                        help="Lesion-Aware Selective Scan: modulate SSM delta with the lesion mask")
+    parser.add_argument("--lesion-pool", action="store_true",
+                        help="Lesion-aware pooling: weight classification features by the lesion mask")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -222,7 +270,7 @@ def main():
                                 num_workers=args.num_workers)
 
         # Fresh model / optimizer / scheduler per fold.
-        model = _build_model(device, args.pretrained)
+        model = _build_model(device, args.pretrained, args.lass, args.lesion_pool)
         cls_weight = None
         if args.class_weight:
             counts = np.bincount(all_labels[tr_idx]).astype(np.float32)
@@ -236,6 +284,14 @@ def main():
         optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
                                       lr=args.lr, weight_decay=args.weight_decay)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+
+        # EMA: an exponential-moving-average copy used for eval & saving.
+        ema_model = None
+        if args.ema:
+            ema_model = copy.deepcopy(model)
+            ema_model.eval()
+            for p in ema_model.parameters():
+                p.requires_grad_(False)
 
         fold_dir = os.path.join(run_dir, f"fold_{fold}")
         os.makedirs(fold_dir, exist_ok=True)
@@ -279,14 +335,23 @@ def main():
             run_correct = run_total = 0
             for it, (images, masks, labels) in enumerate(train_loader):
                 images, masks, labels = images.to(device), masks.to(device), labels.to(device)
-                logits, mask_logits = model(images)
-                loss_cls = criterion_cls(logits, labels)
-                loss_seg = criterion_seg(mask_logits, masks) + dice_loss(mask_logits, masks)
+                if args.fda and np.random.rand() < 0.5:
+                    images = fda(images)
+                logits, mask_logits = model(images, masks) if (args.lass or args.lesion_pool) else model(images)
+                loss_cls = focal_loss(logits, labels) if args.focal else criterion_cls(logits, labels)
+                loss_seg = criterion_seg(mask_logits, masks)
+                loss_seg = loss_seg + (tversky_loss(mask_logits, masks) if args.tversky
+                                       else dice_loss(mask_logits, masks))
                 loss = loss_cls + loss_seg
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+
+                if args.ema:
+                    with torch.no_grad():
+                        for ema_p, p in zip(ema_model.parameters(), model.parameters()):
+                            ema_p.mul_(0.995).add_(p, alpha=1.0 - 0.995)
 
                 run_cls_loss += loss_cls.item()
                 run_seg_loss += loss_seg.item()
@@ -302,8 +367,9 @@ def main():
             train_seg_loss = run_seg_loss / n_batches
             train_acc = run_correct / max(run_total, 1)
 
+            eval_model = ema_model if args.ema else model
             v_cls_loss, v_seg_loss, v_acc, v_auc, v_dice, v_iou = evaluate(
-                model, val_loader, device, criterion_cls, criterion_seg)
+                eval_model, val_loader, device, criterion_cls, criterion_seg)
             lr = optimizer.param_groups[0]["lr"]
 
             print(f"[fold {fold + 1}][epoch {epoch + 1}/{args.epochs}] "
@@ -351,11 +417,11 @@ def main():
             # --- global best weights (only overwrite when beating the global best) ---
             if v_dice > best_seg:
                 best_seg = v_dice
-                torch.save({"model": model.state_dict(), "metric": v_dice}, best_seg_path)
+                torch.save({"model": eval_model.state_dict(), "metric": v_dice}, best_seg_path)
                 print(f"  [saved] best_seg (global Dice={v_dice:.3f})")
             if v_acc > best_cls:
                 best_cls = v_acc
-                torch.save({"model": model.state_dict(), "metric": v_acc}, best_cls_path)
+                torch.save({"model": eval_model.state_dict(), "metric": v_acc}, best_cls_path)
                 print(f"  [saved] best_cls (global acc={v_acc:.3f})")
 
             # --- periodic resume checkpoint + cleanup (this fold only) ---

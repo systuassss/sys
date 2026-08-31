@@ -551,6 +551,7 @@ class SS2Dv2:
         cascade2d=False,
         **kwargs,
     ):
+        dt_bias = kwargs.pop("dt_bias", None)  # LASS: optional (B, K*D, L) delta modulation
         x_proj_weight = self.x_proj_weight
         x_proj_bias = getattr(self, "x_proj_bias", None)
         dt_projs_weight = self.dt_projs_weight
@@ -658,6 +659,8 @@ class SS2Dv2:
 
             xs = xs.view(B, -1, L)
             dts = dts.contiguous().view(B, -1, L)
+            if dt_bias is not None:
+                dts = dts + dt_bias
             As = -torch.exp(A_logs.to(torch.float)) # (k * c, d_state)
             Bs = Bs.contiguous().view(B, K, N, L)
             Cs = Cs.contiguous().view(B, K, N, L)
@@ -698,7 +701,7 @@ class SS2Dv2:
         if self.with_dconv:
             x = self.conv2d(x) # (b, d, h, w)
         x = self.act(x)
-        y = self.forward_core(x)
+        y = self.forward_core(x, **kwargs)
         y = self.out_act(y)
         if not self.disable_z:
             y = y * z
@@ -1089,13 +1092,13 @@ class VSSBlock(nn.Module):
             mlp_hidden_dim = int(hidden_dim * mlp_ratio)
             self.mlp = _MLP(in_features=hidden_dim, hidden_features=mlp_hidden_dim, act_layer=mlp_act_layer, drop=mlp_drop_rate, channels_first=channel_first)
 
-    def _forward(self, input: torch.Tensor):
+    def _forward(self, input: torch.Tensor, dt_bias=None):
         x = input
         if self.ssm_branch:
             if self.post_norm:
-                x = x + self.drop_path(self.norm(self.op(x)))
+                x = x + self.drop_path(self.norm(self.op(x, dt_bias=dt_bias)))
             else:
-                x = x + self.drop_path(self.op(self.norm(x)))
+                x = x + self.drop_path(self.op(self.norm(x), dt_bias=dt_bias))
         if self.mlp_branch:
             if self.post_norm:
                 x = x + self.drop_path(self.norm2(self.mlp(x))) # FFN
@@ -1103,11 +1106,11 @@ class VSSBlock(nn.Module):
                 x = x + self.drop_path(self.mlp(self.norm2(x))) # FFN
         return x
 
-    def forward(self, input: torch.Tensor):
+    def forward(self, input: torch.Tensor, dt_bias=None):
         if self.use_checkpoint:
-            return checkpoint.checkpoint(self._forward, input)
+            return checkpoint.checkpoint(self._forward, input, dt_bias)
         else:
-            return self._forward(input)
+            return self._forward(input, dt_bias)
 
 
 class VSSM(nn.Module):
@@ -1470,16 +1473,19 @@ class Backbone_VSSM(VSSM):
         except Exception as e:
             print(f"Failed loading checkpoint form {ckpt}: {e}")
 
-    def forward(self, x):
-        def layer_forward(l, x):
-            x = l.blocks(x)
+    def forward(self, x, dt_bias=None):
+        # dt_bias: optional list of per-layer (B, K*D, L) delta modulations (LASS).
+        def layer_forward(l, x, dtb):
+            for blk in l.blocks:
+                x = blk(x, dt_bias=dtb)
             y = l.downsample(x)
             return x, y
 
         x = self.patch_embed(x)
         outs = []
         for i, layer in enumerate(self.layers):
-            o, x = layer_forward(layer, x) # (B, H, W, C)
+            dtb = dt_bias[i] if dt_bias is not None else None
+            o, x = layer_forward(layer, x, dtb) # (B, H, W, C)
             if i in self.out_indices:
                 norm_layer = getattr(self, f'outnorm{i}')
                 out = norm_layer(o)
@@ -1489,6 +1495,6 @@ class Backbone_VSSM(VSSM):
 
         if len(self.out_indices) == 0:
             return x
-        
+
         return outs
 

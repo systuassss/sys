@@ -87,9 +87,12 @@ def main():
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = MultiTaskVMamba(encoder_config=VSSM_TINY, num_classes=2)
     ck = torch.load(args.weights, map_location="cpu")
     state = ck["model"] if isinstance(ck, dict) and "model" in ck else ck
+    use_lass = any("lesion_dt" in k for k in state.keys())
+    use_lesion_pool = any("lesion_scale" in k for k in state.keys())
+    model = MultiTaskVMamba(encoder_config=VSSM_TINY, num_classes=2,
+                            use_lass=use_lass, use_lesion_pool=use_lesion_pool)
     model.load_state_dict(state)
     model.to(device).eval()
     print(f"[eval] loaded {args.weights} (metric={ck.get('metric', float('nan')) if isinstance(ck, dict) else 'na'})")
