@@ -1,0 +1,84 @@
+[transformers] Disabling PyTorch because PyTorch >= 2.5 is required but found 2.1.2+cu118
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+/root/miniconda3/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+[train] device=cuda
+[train] run timestamp = 20260830_230253
+[train] total samples: 1875 (benign=1268, malignant=607)
+
+[fold 1/5] train=1500 val=375 (benign=254, malignant=121)
+[MultiTaskVMamba] loaded pretrained backbone from /root/autodl-tmp/BU-Mamba/checkpoints/pretrained/vssm_tiny_0230_ckpt_epoch_262.pth
+  missing keys: 8, unexpected keys: 0
+[fold 1][epoch 1/40] train acc=0.686 cls=0.599 seg=1.289 | val acc=0.848 auc=0.880 dice=0.745 iou=0.617 (20.0s)
+  [saved] best_seg (global Dice=0.745)
+  [saved] best_cls (global acc=0.848)
+[fold 1][epoch 2/40] train acc=0.777 cls=0.478 seg=0.600 | val acc=0.875 auc=0.917 dice=0.863 iou=0.779 (14.3s)
+  [saved] best_seg (global Dice=0.863)
+  [saved] best_cls (global acc=0.875)
+[fold 1][epoch 3/40] train acc=0.849 cls=0.366 seg=0.293 | val acc=0.872 auc=0.940 dice=0.872 iou=0.793 (14.1s)
+  [saved] best_seg (global Dice=0.872)
+[fold 1][epoch 4/40] train acc=0.860 cls=0.317 seg=0.250 | val acc=0.875 auc=0.952 dice=0.879 iou=0.805 (14.2s)
+  [saved] best_seg (global Dice=0.879)
+[fold 1][epoch 5/40] train acc=0.898 cls=0.259 seg=0.239 | val acc=0.904 auc=0.956 dice=0.876 iou=0.796 (14.1s)
+  [saved] best_cls (global acc=0.904)
+[fold 1][epoch 6/40] train acc=0.898 cls=0.232 seg=0.223 | val acc=0.920 auc=0.961 dice=0.886 iou=0.817 (14.1s)
+  [saved] best_seg (global Dice=0.886)
+  [saved] best_cls (global acc=0.920)
+[fold 1][epoch 7/40] train acc=0.925 cls=0.191 seg=0.207 | val acc=0.885 auc=0.961 dice=0.889 iou=0.819 (14.1s)
+  [saved] best_seg (global Dice=0.889)
+[fold 1][epoch 8/40] train acc=0.933 cls=0.179 seg=0.204 | val acc=0.917 auc=0.969 dice=0.881 iou=0.806 (14.1s)
+[fold 1][epoch 9/40] train acc=0.958 cls=0.122 seg=0.193 | val acc=0.923 auc=0.965 dice=0.891 iou=0.822 (14.4s)
+  [saved] best_seg (global Dice=0.891)
+  [saved] best_cls (global acc=0.923)
+[fold 1][epoch 10/40] train acc=0.956 cls=0.112 seg=0.191 | val acc=0.917 auc=0.963 dice=0.898 iou=0.832 (14.1s)
+  [saved] best_seg (global Dice=0.898)
+  [saved] ckpt epoch 10
+[fold 1][epoch 11/40] train acc=0.964 cls=0.103 seg=0.182 | val acc=0.899 auc=0.960 dice=0.889 iou=0.820 (14.1s)
+[fold 1][epoch 12/40] train acc=0.973 cls=0.073 seg=0.180 | val acc=0.912 auc=0.969 dice=0.903 iou=0.839 (14.1s)
+  [saved] best_seg (global Dice=0.903)
+[fold 1][epoch 13/40] train acc=0.968 cls=0.076 seg=0.176 | val acc=0.904 auc=0.958 dice=0.890 iou=0.823 (14.1s)
+[fold 1][epoch 14/40] train acc=0.978 cls=0.059 seg=0.175 | val acc=0.931 auc=0.975 dice=0.895 iou=0.828 (14.2s)
+  [saved] best_cls (global acc=0.931)
+[fold 1][epoch 15/40] train acc=0.984 cls=0.043 seg=0.165 | val acc=0.904 auc=0.969 dice=0.899 iou=0.833 (14.1s)
+[fold 1][epoch 16/40] train acc=0.989 cls=0.035 seg=0.164 | val acc=0.915 auc=0.967 dice=0.896 iou=0.831 (14.1s)
+[fold 1][epoch 17/40] train acc=0.987 cls=0.041 seg=0.159 | val acc=0.923 auc=0.973 dice=0.897 iou=0.831 (14.1s)
+[fold 1][epoch 18/40] train acc=0.997 cls=0.016 seg=0.152 | val acc=0.933 auc=0.975 dice=0.901 iou=0.838 (14.1s)
+  [saved] best_cls (global acc=0.933)
+[fold 1][epoch 19/40] train acc=0.990 cls=0.033 seg=0.147 | val acc=0.928 auc=0.975 dice=0.902 iou=0.837 (14.1s)
+[fold 1][epoch 20/40] train acc=0.994 cls=0.014 seg=0.148 | val acc=0.925 auc=0.977 dice=0.905 iou=0.843 (14.0s)
+  [saved] best_seg (global Dice=0.905)
+  [saved] ckpt epoch 20
+[fold 1][epoch 21/40] train acc=0.997 cls=0.010 seg=0.141 | val acc=0.941 auc=0.980 dice=0.906 iou=0.844 (14.3s)
+  [saved] best_seg (global Dice=0.906)
+  [saved] best_cls (global acc=0.941)
+[fold 1][epoch 22/40] train acc=0.994 cls=0.016 seg=0.137 | val acc=0.907 auc=0.971 dice=0.903 iou=0.839 (14.1s)
+[fold 1][epoch 23/40] train acc=0.995 cls=0.019 seg=0.135 | val acc=0.933 auc=0.973 dice=0.904 iou=0.840 (14.0s)
+[fold 1][epoch 24/40] train acc=0.998 cls=0.011 seg=0.132 | val acc=0.915 auc=0.972 dice=0.904 iou=0.841 (14.1s)
+[fold 1][epoch 25/40] train acc=1.000 cls=0.005 seg=0.131 | val acc=0.931 auc=0.974 dice=0.903 iou=0.842 (14.1s)
+[fold 1][epoch 26/40] train acc=0.999 cls=0.003 seg=0.127 | val acc=0.936 auc=0.974 dice=0.902 iou=0.840 (14.2s)
+[fold 1][epoch 27/40] train acc=0.999 cls=0.006 seg=0.124 | val acc=0.944 auc=0.974 dice=0.904 iou=0.842 (14.1s)
+  [saved] best_cls (global acc=0.944)
+[fold 1][epoch 28/40] train acc=0.999 cls=0.004 seg=0.122 | val acc=0.941 auc=0.977 dice=0.902 iou=0.840 (14.1s)
+[fold 1][epoch 29/40] train acc=0.997 cls=0.008 seg=0.121 | val acc=0.941 auc=0.976 dice=0.900 iou=0.838 (14.1s)
+[fold 1][epoch 30/40] train acc=0.998 cls=0.009 seg=0.121 | val acc=0.939 auc=0.978 dice=0.904 iou=0.841 (14.1s)
+  [saved] ckpt epoch 30
+[fold 1][epoch 31/40] train acc=1.000 cls=0.001 seg=0.117 | val acc=0.944 auc=0.977 dice=0.904 iou=0.842 (14.1s)
+[fold 1][epoch 32/40] train acc=0.999 cls=0.002 seg=0.116 | val acc=0.944 auc=0.978 dice=0.903 iou=0.841 (14.0s)
+[fold 1][epoch 33/40] train acc=0.999 cls=0.002 seg=0.114 | val acc=0.933 auc=0.978 dice=0.902 iou=0.840 (14.0s)
+[fold 1][epoch 34/40] train acc=0.997 cls=0.004 seg=0.113 | val acc=0.936 auc=0.978 dice=0.903 iou=0.841 (14.4s)
+[fold 1][epoch 35/40] train acc=1.000 cls=0.002 seg=0.113 | val acc=0.936 auc=0.977 dice=0.902 iou=0.840 (14.1s)
+[fold 1][epoch 36/40] train acc=0.999 cls=0.002 seg=0.113 | val acc=0.939 auc=0.977 dice=0.903 iou=0.841 (14.1s)
+[fold 1][epoch 37/40] train acc=1.000 cls=0.001 seg=0.110 | val acc=0.939 auc=0.977 dice=0.902 iou=0.841 (14.1s)
+[fold 1][epoch 38/40] train acc=1.000 cls=0.002 seg=0.111 | val acc=0.939 auc=0.977 dice=0.902 iou=0.841 (14.1s)
+[fold 1][epoch 39/40] train acc=0.999 cls=0.002 seg=0.111 | val acc=0.939 auc=0.977 dice=0.902 iou=0.840 (14.1s)
+[fold 1][epoch 40/40] train acc=0.999 cls=0.004 seg=0.111 | val acc=0.939 auc=0.977 dice=0.902 iou=0.840 (14.2s)
+  [saved] ckpt epoch 40
+  [removed] ckpt_epoch10.tar
+[fold 1] best dice=0.906 iou=0.844 acc=0.944 auc=0.974
+
+===== cross-validation summary =====
+  fold 1: dice=0.906 iou=0.844 acc=0.944 auc=0.974
+  MEAN: dice=0.906±0.000  iou=0.844±0.000  acc=0.944±0.000  auc=0.974±0.000
+  saved -> /root/autodl-tmp/BU-Mamba/output_busbra/exp_20260830_230253/cv_summary.csv
+
+[train] done. global best_seg=0.906 (Dice), best_cls=0.944 (acc)
